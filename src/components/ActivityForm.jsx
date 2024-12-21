@@ -14,12 +14,44 @@ import {
 
 const ActivityForm = ({ onAddActivity }) => {
   const [formData, setFormData] = useState({
-    description: '',
-    group: '',
-    type: '',
-    hours: '',
+    description: "",
+    group: "",
+    type: "",
+    hours: "",
     external: false,
   });
+
+  // Configuração dos grupos, tipos e limites do PPC
+  const groups = {
+    Ensino: [
+      "Estágio Extracurricular",
+      "Monitoria",
+      "Concursos Acadêmicos",
+      "Defesas de TCC",
+      "Cursos Profissionalizantes (Específicos)",
+      "Cursos Profissionalizantes (Geral)",
+    ],
+    Pesquisa: [
+      "Iniciação Científica",
+      "Publicação de Artigos",
+      "Capítulo de Livro",
+      "Resumos de Artigos",
+      "Registro de Patentes",
+      "Premiações de Pesquisa",
+      "Congressos de Pesquisa (Ouvinte)",
+      "Congressos de Pesquisa (Apresentador)",
+    ],
+    Extensão: [
+      "Projetos de Extensão",
+      "Atividades Culturais",
+      "Visitas Técnicas",
+      "Visitas a Feiras e Exposições",
+      "Congressos Extensionistas (Ouvinte)",
+      "Congressos Extensionistas (Apresentador)",
+      "Cursos de Idiomas",
+      "Projeto Empresa Júnior",
+    ],
+  };
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -31,17 +63,30 @@ const ActivityForm = ({ onAddActivity }) => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (formData.description && formData.group && formData.type && formData.hours) {
+
+    if (
+      formData.description &&
+      formData.group &&
+      formData.type &&
+      formData.hours
+    ) {
+      const groupTypes = groups[formData.group] || [];
+      if (!groupTypes.includes(formData.type)) {
+        alert(`O tipo "${formData.type}" não é válido para o grupo "${formData.group}".`);
+        return;
+      }
+
+      // Adiciona a atividade caso esteja dentro das regras do PPC
       onAddActivity({ ...formData, hours: parseInt(formData.hours, 10) });
       setFormData({
-        description: '',
-        group: '',
-        type: '',
-        hours: '',
+        description: "",
+        group: "",
+        type: "",
+        hours: "",
         external: false,
       });
     } else {
-      alert('Preencha todos os campos');
+      alert("Preencha todos os campos corretamente.");
     }
   };
 
@@ -71,9 +116,11 @@ const ActivityForm = ({ onAddActivity }) => {
               onChange={handleChange}
               label="Grupo"
             >
-              <MenuItem value="Ensino">Ensino</MenuItem>
-              <MenuItem value="Pesquisa">Pesquisa</MenuItem>
-              <MenuItem value="Extensão">Extensão</MenuItem>
+              {Object.keys(groups).map((group) => (
+                <MenuItem key={group} value={group}>
+                  {group}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
@@ -87,14 +134,13 @@ const ActivityForm = ({ onAddActivity }) => {
               value={formData.type}
               onChange={handleChange}
               label="Tipo"
+              disabled={!formData.group}
             >
-              <MenuItem value="Monitoria">Monitoria</MenuItem>
-              <MenuItem value="Aulas Ministradas">Aulas Ministradas</MenuItem>
-              <MenuItem value="Publicação de Artigos">Publicação de Artigos</MenuItem>
-              <MenuItem value="Projetos de Extensão">Projetos de Extensão</MenuItem>
-              <MenuItem value="Atividades Culturais">Atividades Culturais</MenuItem>
-              <MenuItem value="Visitas Técnicas">Visitas Técnicas</MenuItem>
-              <MenuItem value="Participação em Congressos">Participação em Congressos</MenuItem>
+              {(groups[formData.group] || []).map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
@@ -129,21 +175,21 @@ const ActivityForm = ({ onAddActivity }) => {
 
         {/* Botão de Submissão */}
         <Grid item xs={12}>
-        <Button
-    variant="contained"
-    type="submit"
-    fullWidth
-    sx={{
-      mt: 2,
-      backgroundColor: '#3C6178',
-      color: '#FFFFFF',
-      '&:hover': {
-        backgroundColor: '#2e4f5e', // Cor mais escura ao passar o mouse
-      },
-    }}
-  >
-    Adicionar Atividade
-  </Button>
+          <Button
+            variant="contained"
+            type="submit"
+            fullWidth
+            sx={{
+              mt: 2,
+              backgroundColor: "#3C6178",
+              color: "#FFFFFF",
+              "&:hover": {
+                backgroundColor: "#2e4f5e", // Cor mais escura ao passar o mouse
+              },
+            }}
+          >
+            Adicionar Atividade
+          </Button>
         </Grid>
       </Grid>
     </Box>

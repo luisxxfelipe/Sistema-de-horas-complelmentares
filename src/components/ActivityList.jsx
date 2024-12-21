@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -12,34 +12,56 @@ import {
   Grid,
   Card,
   CardContent,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 
-const ActivityList = ({ activities }) => {
-  // Total de horas por grupo
+const ActivityList = ({ activities, setActivities }) => {
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+
+  const handleDeleteActivity = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/activities/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao excluir a atividade.");
+      }
+
+      setActivities((prevActivities) =>
+        prevActivities.filter((activity) => activity._id !== id)
+      );
+
+      alert("Atividade excluída com sucesso!");
+    } catch (error) {
+      alert(`Erro ao excluir atividade: ${error.message}`);
+    }
+  };
+
   const totalHorasGrupo = activities.reduce((acc, activity) => {
-    const group = activity.group || "Sem Informação"; // Define valor padrão
+    const group = activity.group || "Não especificado";
     acc[group] = (acc[group] || 0) + activity.hours;
     return acc;
   }, {});
 
-  // Calculando total de horas externas e internas
   const totalHorasExternas = activities.reduce(
     (acc, activity) => (activity.external ? acc + activity.hours : acc),
     0
   );
+
   const totalHorasInternas = activities.reduce(
     (acc, activity) => (!activity.external ? acc + activity.hours : acc),
     0
   );
 
-  // Função para exportar os dados para CSV
   const exportToCSV = () => {
     const rows = [
       ["Descrição", "Grupo", "Tipo", "Horas", "Externa"],
       ...activities.map((act) => [
         act.description,
-        act.group || "Sem Informação",
-        act.type || "Sem Informação",
+        act.group || "Não especificado",
+        act.type || "Não especificado",
         act.hours,
         act.external ? "Sim" : "Não",
       ]),
@@ -52,6 +74,8 @@ const ActivityList = ({ activities }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    setOpenSnackbar(true);
   };
 
   return (
@@ -60,7 +84,6 @@ const ActivityList = ({ activities }) => {
         Atividades Registradas
       </Typography>
 
-      {/* Tabela de atividades */}
       <TableContainer component={Paper} sx={{ marginBottom: 4 }}>
         <Table>
           <TableHead>
@@ -70,6 +93,7 @@ const ActivityList = ({ activities }) => {
               <TableCell>Tipo</TableCell>
               <TableCell>Horas</TableCell>
               <TableCell>Externa</TableCell>
+              <TableCell>Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -77,15 +101,26 @@ const ActivityList = ({ activities }) => {
               activities.map((activity, index) => (
                 <TableRow key={index}>
                   <TableCell>{activity.description}</TableCell>
-                  <TableCell>{activity.group || "Sem Informação"}</TableCell>
-                  <TableCell>{activity.type || "Sem Informação"}</TableCell>
-                  <TableCell>{activity.hours}</TableCell>
+                  <TableCell>{activity.group || "Não especificado"}</TableCell>
+                  <TableCell>{activity.type || "Não especificado"}</TableCell>
+                  <TableCell>
+                    {new Intl.NumberFormat("pt-BR").format(activity.hours)} horas
+                  </TableCell>
                   <TableCell>{activity.external ? "Sim" : "Não"}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => handleDeleteActivity(activity._id)}
+                    >
+                      Excluir
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   Nenhuma atividade registrada.
                 </TableCell>
               </TableRow>
@@ -94,7 +129,6 @@ const ActivityList = ({ activities }) => {
         </Table>
       </TableContainer>
 
-      {/* Totais em Cards */}
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6} md={4}>
           <Card>
@@ -104,7 +138,7 @@ const ActivityList = ({ activities }) => {
                 <ul>
                   {Object.entries(totalHorasGrupo).map(([group, total]) => (
                     <li key={group}>
-                      {group}: {total} horas
+                      {group}: {new Intl.NumberFormat("pt-BR").format(total)} horas
                     </li>
                   ))}
                 </ul>
@@ -120,23 +154,40 @@ const ActivityList = ({ activities }) => {
             <CardContent>
               <Typography variant="h6">Total de Horas</Typography>
               <ul>
-                <li>Internas: {totalHorasInternas} horas</li>
-                <li>Externas: {totalHorasExternas} horas</li>
+                <li>Internas: {new Intl.NumberFormat("pt-BR").format(totalHorasInternas)} horas</li>
+                <li>Externas: {new Intl.NumberFormat("pt-BR").format(totalHorasExternas)} horas</li>
               </ul>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Botão para exportar os dados */}
       <Button
         onClick={exportToCSV}
         variant="contained"
         color="primary"
-        sx={{ marginTop: 3 }}
+        sx={{
+          marginTop: 3,
+          backgroundColor: "#3C6178",
+          "&:hover": { backgroundColor: "#2e4f5e" },
+        }}
       >
         Exportar CSV
       </Button>
+
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setOpenSnackbar(false)}
+      >
+        <Alert
+          onClose={() => setOpenSnackbar(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          Arquivo CSV exportado com sucesso!
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
