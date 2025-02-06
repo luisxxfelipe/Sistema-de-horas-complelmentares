@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ActivityForm from "./components/ActivityForm";
 import ActivityList from "./components/ActivityList";
 import { AppBar, Toolbar, Container, Typography, Box } from "@mui/material";
@@ -55,25 +55,7 @@ const rules = {
 const App = () => {
   const [activities, setActivities] = useState([]);
 
-  // Busca atividades ao carregar
-  useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/activities");
-        if (!response.ok) {
-          throw new Error("Erro ao buscar atividades do servidor.");
-        }
-        const data = await response.json();
-        setActivities(data);
-      } catch (error) {
-        alert(`Erro ao carregar atividades: ${error.message}`);
-      }
-    };
-
-    fetchActivities();
-  }, []);
-
-  const handleAddActivity = async (activity) => {
+  const handleAddActivity = (activity) => {
     const { group, type, hours } = activity;
 
     const groupRules = rules[group];
@@ -131,29 +113,7 @@ const App = () => {
       return;
     }
 
-    // Salva no estado e no banco de dados
-    const newActivity = { ...activity, hours };
-    try {
-      const response = await fetch("http://localhost:5000/api/activities", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newActivity),
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao salvar a atividade no servidor.");
-      }
-
-      const savedActivity = await response.json();
-      alert(savedActivity.message || "Atividade salva com sucesso!");
-
-      // Atualiza o estado local
-      setActivities((prevActivities) => [...prevActivities, newActivity]);
-    } catch (error) {
-      alert(`Erro ao salvar atividade no banco de dados: ${error.message}`);
-    }
+    setActivities((prevActivities) => [...prevActivities, activity]);
   };
 
   return (
@@ -173,7 +133,7 @@ const App = () => {
           Sistema de lançamento de horas complementares
         </Typography>
         <ActivityForm onAddActivity={handleAddActivity} />
-        <ActivityList activities={activities} />
+        <ActivityList activities={activities} setActivities={setActivities} />
       </Container>
 
       <Box

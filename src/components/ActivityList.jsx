@@ -19,24 +19,10 @@ import {
 const ActivityList = ({ activities, setActivities }) => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
-  const handleDeleteActivity = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/activities/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao excluir a atividade.");
-      }
-
-      setActivities((prevActivities) =>
-        prevActivities.filter((activity) => activity._id !== id)
-      );
-
-      alert("Atividade excluída com sucesso!");
-    } catch (error) {
-      alert(`Erro ao excluir atividade: ${error.message}`);
-    }
+  const handleDeleteActivity = (id) => {
+    setActivities((prevActivities) =>
+      prevActivities.filter((activity) => activity._id !== id)
+    );
   };
 
   const totalHorasGrupo = activities.reduce((acc, activity) => {
