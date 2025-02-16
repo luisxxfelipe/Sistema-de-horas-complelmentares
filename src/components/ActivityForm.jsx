@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TextField,
   Select,
@@ -17,94 +17,134 @@ const ActivityForm = ({ onActivityAdded }) => {
   const [formData, setFormData] = useState({
     category: "",
     group: "",
-    type: "",
     description: "",
     hours: "",
     external: false,
   });
 
-  // Configuração das categorias e grupos
-  const categories = {
-    "Atividades Complementares": {
-      Ensino: [
-        "Estágio Extracurricular",
-        "Monitoria",
-        "Concursos Acadêmicos",
-        "Defesas de TCC",
-        "Cursos Profissionalizantes (Específicos)",
-        "Cursos Profissionalizantes (Geral)",
-      ],
-      Pesquisa: [
-        "Iniciação Científica",
-        "Publicação de Artigos",
-        "Capítulo de Livro",
-        "Resumos de Artigos",
-        "Registro de Patentes",
-        "Premiações de Pesquisa",
-        "Congressos de Pesquisa (Ouvinte)",
-        "Congressos de Pesquisa (Apresentador)",
-      ],
-      Extensão: [
-        "Projetos de Extensão",
-        "Atividades Culturais",
-        "Visitas Técnicas",
-        "Visitas a Feiras e Exposições",
-        "Congressos Extensionistas (Ouvinte)",
-        "Congressos Extensionistas (Apresentador)",
-        "Cursos de Idiomas",
-        "Projeto Empresa Júnior",
-      ],
-    },
-    "Atividades de Extensão": {
-      Extensão: [
-        "Projeto de Extensão",
-        "Comissão Organizadora de Eventos",
-        "Participação em Projetos de Responsabilidade Social",
-        "Instrutor de Cursos e Minicursos Abertos à Sociedade",
-        "Palestrante (Eventos Abertos à Comunidade)",
-        "Monitoria Acadêmica",
-        "Organizador de Atividades Culturais",
-        "Organizador de Visitas Técnicas",
-        "Organizador de Visitas a Feiras e Exposições",
-        "Projeto Empresa Júnior (Extensão)",
-      ],
-    },
-  };
+  const [categories, setCategories] = useState([]);
+  const [groupOptions, setGroupOptions] = useState([]);
+
+  // Carregar as categorias ao carregar o componente
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from("categories")
+          .select("id, nome");
+
+        if (categoriesError) {
+          console.error("Erro ao buscar categorias:", categoriesError);
+        } else {
+          setCategories(categoriesData);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar categorias:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Carregar os grupos de atividades com base na categoria selecionada
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (formData.category) {
+        try {
+          // Buscar categoria_id usando o nome da categoria
+          const { data: categoryData, error: categoryError } = await supabase
+            .from("categories")
+            .select("id")
+            .eq("nome", formData.category) // Buscando pela categoria selecionada
+            .single();
+
+          if (categoryError || !categoryData) {
+            console.error("Erro ao buscar categoria:", categoryError);
+            return;
+          }
+
+          const categoryId = categoryData.id; // Pegamos o id da categoria
+
+          // Buscar os grupos (tipos) de atividades com base no `category_id`
+          const { data: groupsData, error: groupsError } = await supabase
+            .from("activity_types")
+            .select("id, nome")
+            .eq("categoria_id", categoryId); // Usando o category_id para filtrar
+
+          if (groupsError) {
+            console.error("Erro ao buscar grupos:", groupsError);
+          } else {
+            setGroupOptions(groupsData);
+            setFormData((prevData) => ({
+              ...prevData,
+              group: groupsData[0]?.id || "", // Definir grupo padrão
+            }));
+          }
+        } catch (error) {
+          console.error("Erro ao buscar grupos:", error);
+        }
+      }
+    };
+
+    fetchGroups();
+  }, [formData.category]);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
-      ...(name === "category" && { group: "", type: "" }), // Reseta grupo e tipo ao mudar a categoria
-      ...(name === "group" && { type: "" }), // Reseta tipo ao mudar o grupo
+      ...(name === "category" && { group: "" }), // Reseta grupo ao mudar a categoria
     }));
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const { category, group, type, description, hours, external } = formData;
+    const { category, group, description, hours, external } = formData;
 
-    if (!category || !group || !type || !description || !hours) {
+    if (!category || !group || !description || !hours) {
       alert("Preencha todos os campos corretamente.");
       return;
     }
 
     try {
-      // Buscar `tipo_id` correspondente no Supabase
+      // Buscar categoria_id com base no nome da categoria
+      const { data: categoryData, error: categoryError } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("nome", category);  // Buscando as categorias com o nome fornecido
+
+      if (categoryError || !categoryData || categoryData.length === 0) {
+        console.error("Erro ao buscar categoria:", categoryError);
+        alert(`Categoria "${category}" não encontrada no banco.`);
+        return;
+      }
+
+      const categoryId = categoryData[0]?.id; // Pegamos o primeiro item da lista se houver mais de um
+
+      // Buscar tipo_id com base no grupo selecionado
       const { data: tipoData, error: tipoError } = await supabase
         .from("activity_types")
-        .select("id")
-        .eq("nome", type)
-        .single();
+        .select("id, hours")
+        .eq("categoria_id", categoryId) // Agora filtramos pelo `category_id`
+        .eq("id", group) // Associando o tipo de atividade com o grupo correto
+        .single();  // Garantimos que apenas um item seja retornado
 
       if (tipoError || !tipoData) {
         console.error("Erro ao buscar tipo de atividade:", tipoError);
-        alert(`O tipo "${type}" não foi encontrado no banco.`);
+        alert(`O grupo de atividades não foi encontrado.`);
         return;
       }
 
       const tipo_id = tipoData.id;
+      const tipo_horas = tipoData.hours; // Horas do tipo de atividade
+
+      if (hours > tipo_horas) {
+        alert(
+          `O limite de horas para o grupo de atividades é ${tipo_horas} horas.`
+        );
+        return;
+      }
 
       // Buscar `user_id` do usuário logado
       const { data: userData, error: userError } =
@@ -138,7 +178,6 @@ const ActivityForm = ({ onActivityAdded }) => {
       setFormData({
         category: "",
         group: "",
-        type: "",
         description: "",
         hours: "",
         external: false,
@@ -160,9 +199,9 @@ const ActivityForm = ({ onActivityAdded }) => {
               value={formData.category}
               onChange={handleChange}
             >
-              {Object.keys(categories).map((cat) => (
-                <MenuItem key={cat} value={cat}>
-                  {cat}
+              {categories.map((cat) => (
+                <MenuItem key={cat.id} value={cat.nome}>
+                  {cat.nome}
                 </MenuItem>
               ))}
             </Select>
@@ -179,25 +218,9 @@ const ActivityForm = ({ onActivityAdded }) => {
                 value={formData.group}
                 onChange={handleChange}
               >
-                {Object.keys(categories[formData.category]).map((group) => (
-                  <MenuItem key={group} value={group}>
-                    {group}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        )}
-
-        {/* Seleção de Tipo */}
-        {formData.group && (
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth required>
-              <InputLabel>Tipo</InputLabel>
-              <Select name="type" value={formData.type} onChange={handleChange}>
-                {categories[formData.category][formData.group]?.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {type}
+                {groupOptions.map((group) => (
+                  <MenuItem key={group.id} value={group.id}>
+                    {group.nome}
                   </MenuItem>
                 ))}
               </Select>

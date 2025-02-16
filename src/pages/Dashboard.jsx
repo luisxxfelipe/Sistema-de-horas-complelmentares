@@ -15,12 +15,11 @@ const Dashboard = () => {
         descricao,
         horas,
         externa,
-        activity_types:tipo_id (
+        tipo_id (
           nome,
-          categories:categoria_id (
-            nome
-          )
-        )
+          categoria_id
+        ),
+        categories:tipo_id(categoria_id, nome)
       `);
 
     if (error) {
@@ -34,10 +33,8 @@ const Dashboard = () => {
           descricao: item.descricao,
           horas: item.horas ?? 0, // Evita NaN
           externa: item.externa ? "Sim" : "Não",
-          tipo: item.activity_types?.nome || "Não especificado",
-          categoria:
-            item.activity_types?.categories?.nome || "Não especificado",
-          grupo: item.activity_types?.categories?.nome || "Não especificado", // Pega o grupo corretamente
+          tipo: item.tipo_id?.nome || "Não especificado", // Nome do tipo de atividade
+          categoria: item.tipo_id?.categoria_id || "Não especificado", // ID da categoria
         }))
       );
     }

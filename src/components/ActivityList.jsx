@@ -16,14 +16,14 @@ import {
   CardContent,
   Snackbar,
   Alert,
+  Box,
 } from "@mui/material";
-
-// import { generatePDF } from "../services/generatePDF";
+import { generatePDF } from "../services/generatePDF";
 
 const ActivityList = ({ activities, setActivities }) => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
-  //  Função de exclusão corrigida para remover apenas a atividade certa
+  // Função de exclusão corrigida para remover apenas a atividade certa
   const handleDeleteActivity = async (id) => {
     const { error } = await supabase.from("activities").delete().eq("id", id);
 
@@ -37,40 +37,41 @@ const ActivityList = ({ activities, setActivities }) => {
     );
   };
 
-  //  Calcula totais separados por categoria e grupo
+  // Calcula totais separados por categoria
   const totalHorasPorCategoria = activities.reduce((acc, activity) => {
-    const category = activity.categoria || "Não especificado";
+    const category = activity.categoria || "Não especificado"; // Ajuste para refletir o nome correto da categoria
     acc[category] = (acc[category] || 0) + activity.horas;
     return acc;
   }, {});
 
+  // Calcula totais separados por grupo
   const totalHorasPorGrupo = activities.reduce((acc, activity) => {
-    const group = activity.grupo || "Não especificado";
+    const group = activity.grupo || "Não especificado"; // Ajuste para refletir o nome correto do grupo
     acc[group] = (acc[group] || 0) + activity.horas;
     return acc;
   }, {});
 
-  //  Separação entre horas internas e externas
+  // Separação entre horas internas e externas
   const totalHorasExternas = activities.reduce(
-    (acc, activity) => (activity.external ? acc + activity.hours : acc),
+    (acc, activity) => (activity.externa ? acc + activity.horas : acc), // Correção para usar `horas`
     0
   );
   const totalHorasInternas = activities.reduce(
-    (acc, activity) => (!activity.external ? acc + activity.hours : acc),
+    (acc, activity) => (!activity.externa ? acc + activity.horas : acc), // Correção para usar `horas`
     0
   );
 
-  //  Exportação para CSV agora inclui a categoria
+  // Exportação para CSV agora inclui a categoria
   const exportToCSV = () => {
     const rows = [
       ["Categoria", "Grupo", "Tipo", "Descrição", "Horas", "Externa"],
       ...activities.map((act) => [
-        act.category || "Não especificado",
-        act.group || "Não especificado",
-        act.type || "Não especificado",
-        act.description,
-        act.hours,
-        act.external ? "Sim" : "Não",
+        act.categoria || "Não especificado", // Corrigido para usar `categoria`
+        act.grupo || "Não especificado", // Corrigido para usar `grupo`
+        act.tipo || "Não especificado", // Corrigido para usar `tipo`
+        act.descricao,
+        act.horas,
+        act.externa ? "Sim" : "Não",
       ]),
     ];
     const csvContent =
@@ -83,6 +84,64 @@ const ActivityList = ({ activities, setActivities }) => {
     document.body.removeChild(link);
 
     setOpenSnackbar(true);
+  };
+
+  const handleGeneratePDF = async (tipoAtividade) => {
+    if (activities.length > 0) {
+      // Pega o id da primeira atividade
+      const activity_id = activities[0]?.id;
+
+      if (activity_id) {
+        // Buscar o user_id associado à atividade
+        const { data: activityData, error } = await supabase
+          .from("activities")
+          .select("user_id")
+          .eq("id", activity_id)
+          .single();
+
+        if (error) {
+          console.error("Erro ao buscar user_id da atividade:", error);
+          return;
+        }
+
+        const user_id = activityData?.user_id;
+
+        if (user_id) {
+          // Buscar todas as atividades do usuário
+          const { data: activitiesData, error: activitiesError } =
+            await supabase
+              .from("activities")
+              .select("*")
+              .eq("user_id", user_id);
+
+          if (activitiesError) {
+            console.error("Erro ao buscar atividades:", activitiesError);
+            return;
+          }
+
+          // Buscar os dados do usuário
+          const { data: userData, error: userError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", user_id)
+            .single();
+
+          if (userError) {
+            console.error("Erro ao buscar dados do usuário:", userError);
+            return;
+          }
+
+          // Gerar o PDF com dados de usuário e atividades
+          generatePDF(userData, activitiesData, tipoAtividade);
+        } else {
+          console.error("Erro: user_id não encontrado.");
+        }
+      } else {
+        console.error("Nenhuma atividade encontrada para gerar o PDF.");
+      }
+    } else {
+      console.error("Nenhuma atividade disponível para o PDF.");
+    }
   };
 
   return (
@@ -113,6 +172,7 @@ const ActivityList = ({ activities, setActivities }) => {
                     horas
                   </TableCell>
                   <TableCell>{activity.externa}</TableCell>
+                  <TableCell>{activity.externa}</TableCell>
                   <TableCell>
                     <Button
                       variant="outlined"
@@ -135,7 +195,7 @@ const ActivityList = ({ activities, setActivities }) => {
         </Table>
       </TableContainer>
 
-      {/*  Cartões com totais de horas por categoria e grupo */}
+      {/* Cartões com totais de horas por categoria e grupo */}
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6} md={4}>
           <Card>
@@ -200,34 +260,48 @@ const ActivityList = ({ activities, setActivities }) => {
         </Grid>
       </Grid>
 
-      {/*  Botão para exportar CSV */}
-      {/* <Button
-        onClick={exportToCSV}
-        variant="contained"
-        color="primary"
-        sx={{
-          marginTop: 3,
-          backgroundColor: "#3C6178",
-          "&:hover": { backgroundColor: "#2e4f5e" },
-        }}
-      >
-        Exportar CSV
-      </Button>
+      <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 2 }}>
+        {/* Botão para exportar CSV */}
+        <Button
+          onClick={exportToCSV}
+          variant="contained"
+          color="primary"
+          sx={{
+            backgroundColor: "#3C6178",
+            "&:hover": { backgroundColor: "#2e4f5e" },
+            width: "250px", // Garantindo a largura dos botões
+            height: "50px", // Garantindo a altura dos botões
+          }}
+        >
+          Exportar CSV - Todas as atividades registradas
+        </Button>
 
-      <Button
-        onClick={() => generatePDF(activities)}
-        variant="contained"
-        color="secondary"
-        sx={{
-          marginTop: 2,
-          backgroundColor: "#FFD700",
-          "&:hover": { backgroundColor: "#E6C200" },
-        }}
-      >
-        Gerar PDF
-      </Button> */}
+        <Button
+          onClick={() => handleGeneratePDF("extensao")}
+          variant="contained"
+          color="primary"
+          sx={{
+            width: "250px", // Garantindo a largura dos botões
+            height: "50px", // Garantindo a altura dos botões
+          }}
+        >
+          Gerar PDF - Atividades de Extensão
+        </Button>
 
-      {/*  Notificação ao exportar CSV */}
+        <Button
+          onClick={() => handleGeneratePDF("complementares")}
+          variant="contained"
+          color="secondary"
+          sx={{
+            width: "250px", // Garantindo a largura dos botões
+            height: "50px", // Garantindo a altura dos botões
+          }}
+        >
+          Gerar PDF - Atividades Complementares
+        </Button>
+      </Box>
+
+      {/* Notificação ao exportar CSV */}
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}

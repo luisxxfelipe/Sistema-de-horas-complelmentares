@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { login } from "../services/authService";
 import { TextField, Button, Container, Typography, Box } from "@mui/material";
 
+
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", senha: "" });
   const [error, setError] = useState("");
@@ -17,9 +18,7 @@ const Login = () => {
     event.preventDefault();
     setError("");
   
-    console.log("Tentando login com:", formData); // Debug para verificar os dados enviados
-  
-    const { success, message } = await login(formData.email, formData.senha); // ✅ Enviar os argumentos separados
+    const { success, message } = await login(formData.email, formData.senha); 
   
     if (success) {
       console.log("Login bem-sucedido!");
