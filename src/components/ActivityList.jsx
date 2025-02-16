@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { supabase } from "../services/supabase";
+
 import {
   Table,
   TableBody,
@@ -16,38 +18,57 @@ import {
   Alert,
 } from "@mui/material";
 
+// import { generatePDF } from "../services/generatePDF";
+
 const ActivityList = ({ activities, setActivities }) => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
-  const handleDeleteActivity = (id) => {
+  //  Função de exclusão corrigida para remover apenas a atividade certa
+  const handleDeleteActivity = async (id) => {
+    const { error } = await supabase.from("activities").delete().eq("id", id);
+
+    if (error) {
+      console.error("Erro ao excluir atividade:", error);
+      return;
+    }
+
     setActivities((prevActivities) =>
-      prevActivities.filter((activity) => activity._id !== id)
+      prevActivities.filter((activity) => activity.id !== id)
     );
   };
 
-  const totalHorasGrupo = activities.reduce((acc, activity) => {
-    const group = activity.group || "Não especificado";
-    acc[group] = (acc[group] || 0) + activity.hours;
+  //  Calcula totais separados por categoria e grupo
+  const totalHorasPorCategoria = activities.reduce((acc, activity) => {
+    const category = activity.categoria || "Não especificado";
+    acc[category] = (acc[category] || 0) + activity.horas;
     return acc;
   }, {});
 
+  const totalHorasPorGrupo = activities.reduce((acc, activity) => {
+    const group = activity.grupo || "Não especificado";
+    acc[group] = (acc[group] || 0) + activity.horas;
+    return acc;
+  }, {});
+
+  //  Separação entre horas internas e externas
   const totalHorasExternas = activities.reduce(
     (acc, activity) => (activity.external ? acc + activity.hours : acc),
     0
   );
-
   const totalHorasInternas = activities.reduce(
     (acc, activity) => (!activity.external ? acc + activity.hours : acc),
     0
   );
 
+  //  Exportação para CSV agora inclui a categoria
   const exportToCSV = () => {
     const rows = [
-      ["Descrição", "Grupo", "Tipo", "Horas", "Externa"],
+      ["Categoria", "Grupo", "Tipo", "Descrição", "Horas", "Externa"],
       ...activities.map((act) => [
-        act.description,
+        act.category || "Não especificado",
         act.group || "Não especificado",
         act.type || "Não especificado",
+        act.description,
         act.hours,
         act.external ? "Sim" : "Não",
       ]),
@@ -66,17 +87,14 @@ const ActivityList = ({ activities, setActivities }) => {
 
   return (
     <div>
-      <Typography variant="h4" gutterBottom sx={{ marginTop: 4 }}>
-        Atividades Registradas
-      </Typography>
-
       <TableContainer component={Paper} sx={{ marginBottom: 4 }}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Descrição</TableCell>
+              <TableCell>Categoria</TableCell>
               <TableCell>Grupo</TableCell>
               <TableCell>Tipo</TableCell>
+              <TableCell>Descrição</TableCell>
               <TableCell>Horas</TableCell>
               <TableCell>Externa</TableCell>
               <TableCell>Ações</TableCell>
@@ -86,18 +104,20 @@ const ActivityList = ({ activities, setActivities }) => {
             {activities.length > 0 ? (
               activities.map((activity, index) => (
                 <TableRow key={index}>
-                  <TableCell>{activity.description}</TableCell>
-                  <TableCell>{activity.group || "Não especificado"}</TableCell>
-                  <TableCell>{activity.type || "Não especificado"}</TableCell>
+                  <TableCell>{activity.categoria}</TableCell> {/* Categoria */}
+                  <TableCell>{activity.grupo}</TableCell> {/* Grupo correto */}
+                  <TableCell>{activity.tipo}</TableCell> {/* Tipo */}
+                  <TableCell>{activity.descricao}</TableCell>
                   <TableCell>
-                    {new Intl.NumberFormat("pt-BR").format(activity.hours)} horas
+                    {new Intl.NumberFormat("pt-BR").format(activity.horas)}{" "}
+                    horas
                   </TableCell>
-                  <TableCell>{activity.external ? "Sim" : "Não"}</TableCell>
+                  <TableCell>{activity.externa}</TableCell>
                   <TableCell>
                     <Button
                       variant="outlined"
                       color="secondary"
-                      onClick={() => handleDeleteActivity(activity._id)}
+                      onClick={() => handleDeleteActivity(activity.id)}
                     >
                       Excluir
                     </Button>
@@ -106,7 +126,7 @@ const ActivityList = ({ activities, setActivities }) => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   Nenhuma atividade registrada.
                 </TableCell>
               </TableRow>
@@ -115,16 +135,40 @@ const ActivityList = ({ activities, setActivities }) => {
         </Table>
       </TableContainer>
 
+      {/*  Cartões com totais de horas por categoria e grupo */}
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="h6">Total por Grupos</Typography>
-              {Object.keys(totalHorasGrupo).length > 0 ? (
+              <Typography variant="h6">Total por Categoria</Typography>
+              {Object.keys(totalHorasPorCategoria).length > 0 ? (
                 <ul>
-                  {Object.entries(totalHorasGrupo).map(([group, total]) => (
+                  {Object.entries(totalHorasPorCategoria).map(
+                    ([category, total]) => (
+                      <li key={category}>
+                        {category}:{" "}
+                        {new Intl.NumberFormat("pt-BR").format(total)} horas
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <Typography>Nenhuma categoria registrada.</Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Total por Grupo</Typography>
+              {Object.keys(totalHorasPorGrupo).length > 0 ? (
+                <ul>
+                  {Object.entries(totalHorasPorGrupo).map(([group, total]) => (
                     <li key={group}>
-                      {group}: {new Intl.NumberFormat("pt-BR").format(total)} horas
+                      {group}: {new Intl.NumberFormat("pt-BR").format(total)}{" "}
+                      horas
                     </li>
                   ))}
                 </ul>
@@ -140,15 +184,24 @@ const ActivityList = ({ activities, setActivities }) => {
             <CardContent>
               <Typography variant="h6">Total de Horas</Typography>
               <ul>
-                <li>Internas: {new Intl.NumberFormat("pt-BR").format(totalHorasInternas)} horas</li>
-                <li>Externas: {new Intl.NumberFormat("pt-BR").format(totalHorasExternas)} horas</li>
+                <li>
+                  Internas:{" "}
+                  {new Intl.NumberFormat("pt-BR").format(totalHorasInternas)}{" "}
+                  horas
+                </li>
+                <li>
+                  Externas:{" "}
+                  {new Intl.NumberFormat("pt-BR").format(totalHorasExternas)}{" "}
+                  horas
+                </li>
               </ul>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      <Button
+      {/*  Botão para exportar CSV */}
+      {/* <Button
         onClick={exportToCSV}
         variant="contained"
         color="primary"
@@ -161,6 +214,20 @@ const ActivityList = ({ activities, setActivities }) => {
         Exportar CSV
       </Button>
 
+      <Button
+        onClick={() => generatePDF(activities)}
+        variant="contained"
+        color="secondary"
+        sx={{
+          marginTop: 2,
+          backgroundColor: "#FFD700",
+          "&:hover": { backgroundColor: "#E6C200" },
+        }}
+      >
+        Gerar PDF
+      </Button> */}
+
+      {/*  Notificação ao exportar CSV */}
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}
