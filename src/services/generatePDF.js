@@ -23,7 +23,7 @@ export const generatePDF = async (userData, activities, tipoAtividade) => {
       const { data: activityTypeData, error } = await supabase
         .from("activity_types") // Tabela activity_types
         .select("nome")
-        .eq("id", act.tipo_id)  // Usando tipo_id para obter o nome correto da atividade
+        .eq("id", act.tipo_id) // Usando tipo_id para obter o nome correto da atividade
         .single(); // Assume que o tipo_id é único
 
       if (error) {
@@ -46,35 +46,34 @@ export const generatePDF = async (userData, activities, tipoAtividade) => {
       { text: "\nEstudante: " + userData.nome, style: "text" },
       { text: "Matrícula: " + userData.matricula, style: "text" },
       { text: "Turno: " + userData.turno, style: "text" },
+      { text: "Ano/Semestre de Entrada: " + semestre, style: "text" },
 
-      // Ano/Semestre de Entrada com a linha ajustada
+      { text: "\n\n", style: "text" },
+
+      // Linha para Assinatura e Data com alinhamento correto
       {
-        columns: [
-          { text: "Ano/Semestre de Entrada: " + semestre, style: "text" },
-          {
-            text: "______________________________ de ______________________ de ____________, ______________",
-            style: "line",
-            alignment: "center",
-          },
-        ],
-      },
-
-      { text: "\n", style: "text" },
-
-      // Layout da linha de Local e Assinatura
-      {
-        columns: [
-          {
-            text: "Local e Data",
-            style: "text",
-            alignment: "left",
-          },
-          {
-            text: "Assinatura",
-            style: "text",
-            alignment: "right",
-          },
-        ],
+        table: {
+          widths: ["50%", "50%"],
+          body: [
+            [
+              {
+                text: "________________________________________",
+                alignment: "center",
+                margin: [0, 10],
+              },
+              {
+                text: "________________________________________",
+                alignment: "center",
+                margin: [0, 10],
+              },
+            ],
+            [
+              { text: "Local e Data", alignment: "center", style: "text" },
+              { text: "Assinatura", alignment: "center", style: "text" },
+            ],
+          ],
+        },
+        layout: "noBorders", // Remove bordas da tabela
       },
 
       { text: "\n\n", style: "text" },
@@ -98,31 +97,15 @@ export const generatePDF = async (userData, activities, tipoAtividade) => {
               { text: "*Total", style: "tableHeader" },
             ],
             ...activities.map((act, index) => [
-              activityTypes[index] || "Atividade não definida",  // Atividade
-              act.horas || 0,                                      // Quantidade
-              act.horas || 0,                                      // Total
+              activityTypes[index] || "Atividade não definida", // Atividade
+              act.horas || 0, // Quantidade
+              act.horas || 0, // Total
             ]),
           ],
         },
       },
 
       { text: "Subtotal (máximo 90h)", style: "subtotal" },
-
-      // Assinatura (Ajustando para ocupar toda a largura e os nomes corretos abaixo)
-      {
-        columns: [
-          {
-            text: "Local e Data", // Ajuste do nome
-            style: "text",
-            alignment: "left",
-          },
-          {
-            text: "Assinatura", // Ajuste do nome
-            style: "text",
-            alignment: "right",
-          },
-        ],
-      },
     ],
     styles: {
       header: { fontSize: 14, bold: true, alignment: "center" },

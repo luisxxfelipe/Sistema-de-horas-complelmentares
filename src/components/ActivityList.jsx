@@ -37,6 +37,15 @@ const ActivityList = ({ activities, setActivities }) => {
     );
   };
 
+   // Estilos padrão dos botões
+   const buttonStyle = {
+    backgroundColor: "#3C6178",
+    color: "#fff",
+    "&:hover": { backgroundColor: "#2e4f5e" },
+    width: "250px",
+    height: "50px",
+  };
+
   // Calcula totais separados por categoria
   const totalHorasPorCategoria = activities.reduce((acc, activity) => {
     const category = activity.categoria || "Não especificado"; // Ajuste para refletir o nome correto da categoria
@@ -68,7 +77,6 @@ const ActivityList = ({ activities, setActivities }) => {
       ...activities.map((act) => [
         act.categoria || "Não especificado", // Corrigido para usar `categoria`
         act.grupo || "Não especificado", // Corrigido para usar `grupo`
-        act.tipo || "Não especificado", // Corrigido para usar `tipo`
         act.descricao,
         act.horas,
         act.externa ? "Sim" : "Não",
@@ -88,11 +96,9 @@ const ActivityList = ({ activities, setActivities }) => {
 
   const handleGeneratePDF = async (tipoAtividade) => {
     if (activities.length > 0) {
-      // Pega o id da primeira atividade
       const activity_id = activities[0]?.id;
 
       if (activity_id) {
-        // Buscar o user_id associado à atividade
         const { data: activityData, error } = await supabase
           .from("activities")
           .select("user_id")
@@ -107,15 +113,40 @@ const ActivityList = ({ activities, setActivities }) => {
         const user_id = activityData?.user_id;
 
         if (user_id) {
-          // Buscar todas as atividades do usuário
+          // Buscar todas as atividades do usuário com categoria relacionada
           const { data: activitiesData, error: activitiesError } =
             await supabase
               .from("activities")
-              .select("*")
+              .select(
+                `
+              *,
+              activity_types (
+                nome,
+                categoria_id
+              )
+            `
+              )
               .eq("user_id", user_id);
 
           if (activitiesError) {
             console.error("Erro ao buscar atividades:", activitiesError);
+            return;
+          }
+
+          // Filtrar atividades corretamente
+          const filteredActivities = activitiesData.filter((activity) => {
+            if (tipoAtividade === "extensao") {
+              return activity.activity_types?.categoria_id === 4; // Somente categoria 4
+            } else {
+              return activity.activity_types?.categoria_id !== 4; // Todas as outras categorias
+            }
+          });
+
+          if (filteredActivities.length === 0) {
+            console.error(
+              "Nenhuma atividade encontrada para o tipo:",
+              tipoAtividade
+            );
             return;
           }
 
@@ -131,8 +162,8 @@ const ActivityList = ({ activities, setActivities }) => {
             return;
           }
 
-          // Gerar o PDF com dados de usuário e atividades
-          generatePDF(userData, activitiesData, tipoAtividade);
+          // Geração do PDF apenas com as atividades filtradas
+          generatePDF(userData, filteredActivities, tipoAtividade);
         } else {
           console.error("Erro: user_id não encontrado.");
         }
@@ -146,32 +177,30 @@ const ActivityList = ({ activities, setActivities }) => {
 
   return (
     <div>
-      <TableContainer component={Paper} sx={{ marginBottom: 4 }}>
+      {/* Tabela de Atividades */}
+      <TableContainer component={Paper} sx={{ marginBottom: 4, padding: 2 }}>
         <Table>
           <TableHead>
-            <TableRow>
-              <TableCell>Categoria</TableCell>
-              <TableCell>Grupo</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell>Descrição</TableCell>
-              <TableCell>Horas</TableCell>
-              <TableCell>Externa</TableCell>
-              <TableCell>Ações</TableCell>
+            <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+              <TableCell sx={{ fontWeight: "bold" }}>Categoria</TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>Grupo</TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>Descrição</TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>Horas</TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>Externa</TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {activities.length > 0 ? (
               activities.map((activity, index) => (
                 <TableRow key={index}>
-                  <TableCell>{activity.categoria}</TableCell> {/* Categoria */}
-                  <TableCell>{activity.grupo}</TableCell> {/* Grupo correto */}
-                  <TableCell>{activity.tipo}</TableCell> {/* Tipo */}
+                  <TableCell>{activity.categoria}</TableCell>
+                  <TableCell>{activity.grupo}</TableCell>
                   <TableCell>{activity.descricao}</TableCell>
                   <TableCell>
                     {new Intl.NumberFormat("pt-BR").format(activity.horas)}{" "}
                     horas
                   </TableCell>
-                  <TableCell>{activity.externa}</TableCell>
                   <TableCell>{activity.externa}</TableCell>
                   <TableCell>
                     <Button
@@ -186,7 +215,7 @@ const ActivityList = ({ activities, setActivities }) => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={6} align="center">
                   Nenhuma atividade registrada.
                 </TableCell>
               </TableRow>
@@ -195,113 +224,79 @@ const ActivityList = ({ activities, setActivities }) => {
         </Table>
       </TableContainer>
 
-      {/* Cartões com totais de horas por categoria e grupo */}
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Total por Categoria</Typography>
-              {Object.keys(totalHorasPorCategoria).length > 0 ? (
-                <ul>
-                  {Object.entries(totalHorasPorCategoria).map(
-                    ([category, total]) => (
-                      <li key={category}>
-                        {category}:{" "}
-                        {new Intl.NumberFormat("pt-BR").format(total)} horas
-                      </li>
-                    )
-                  )}
-                </ul>
-              ) : (
-                <Typography>Nenhuma categoria registrada.</Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Total por Grupo</Typography>
-              {Object.keys(totalHorasPorGrupo).length > 0 ? (
-                <ul>
-                  {Object.entries(totalHorasPorGrupo).map(([group, total]) => (
-                    <li key={group}>
-                      {group}: {new Intl.NumberFormat("pt-BR").format(total)}{" "}
+      {/* Cartões de Totais com altura igual */}
+      <Grid container spacing={3} sx={{ marginBottom: 4 }}>
+        {[
+          { title: "Total por Categoria", data: totalHorasPorCategoria },
+          { title: "Total por Grupo", data: totalHorasPorGrupo },
+          {
+            title: "Total de Horas",
+            data: {
+              Internas: totalHorasInternas,
+              Externas: totalHorasExternas,
+            },
+          },
+        ].map((item, index) => (
+          <Grid item xs={12} sm={6} md={4} key={index}>
+            <Card
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <CardContent>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: "bold", marginBottom: 1 }}
+                >
+                  {item.title}
+                </Typography>
+                <ul style={{ margin: 0, paddingLeft: 16 }}>
+                  {Object.entries(item.data).map(([key, value]) => (
+                    <li key={key}>
+                      {key}: {new Intl.NumberFormat("pt-BR").format(value)}{" "}
                       horas
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <Typography>Nenhum grupo registrado.</Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Total de Horas</Typography>
-              <ul>
-                <li>
-                  Internas:{" "}
-                  {new Intl.NumberFormat("pt-BR").format(totalHorasInternas)}{" "}
-                  horas
-                </li>
-                <li>
-                  Externas:{" "}
-                  {new Intl.NumberFormat("pt-BR").format(totalHorasExternas)}{" "}
-                  horas
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
 
-      <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 2 }}>
-        {/* Botão para exportar CSV */}
-        <Button
-          onClick={exportToCSV}
-          variant="contained"
-          color="primary"
-          sx={{
-            backgroundColor: "#3C6178",
-            "&:hover": { backgroundColor: "#2e4f5e" },
-            width: "250px", // Garantindo a largura dos botões
-            height: "50px", // Garantindo a altura dos botões
-          }}
-        >
-          Exportar CSV - Todas as atividades registradas
+      {/* Botões de Ação */}
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 2,
+          justifyContent: "center",
+          marginBottom: 2,
+        }}
+      >
+        <Button onClick={exportToCSV} variant="contained" sx={buttonStyle}>
+          Exportar CSV - Todas as Atividades
         </Button>
-
         <Button
           onClick={() => handleGeneratePDF("extensao")}
           variant="contained"
-          color="primary"
-          sx={{
-            width: "250px", // Garantindo a largura dos botões
-            height: "50px", // Garantindo a altura dos botões
-          }}
+          sx={{ ...buttonStyle, backgroundColor: "#007bff" }}
         >
           Gerar PDF - Atividades de Extensão
         </Button>
-
         <Button
           onClick={() => handleGeneratePDF("complementares")}
           variant="contained"
-          color="secondary"
-          sx={{
-            width: "250px", // Garantindo a largura dos botões
-            height: "50px", // Garantindo a altura dos botões
-          }}
+          sx={{ ...buttonStyle, backgroundColor: "#6f42c1" }}
         >
           Gerar PDF - Atividades Complementares
         </Button>
       </Box>
 
-      {/* Notificação ao exportar CSV */}
+      {/* Notificação ao Exportar CSV */}
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}

@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import RegisterActivity from "./pages/RegisterActivity"; // Nova página para cadastro de atividades
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./hooks/useAuth";
+import "./assets/styles/index.css"; 
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth();

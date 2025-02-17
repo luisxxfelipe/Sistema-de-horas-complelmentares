@@ -1,10 +1,17 @@
+// Função para criar conta (Signup)
 import { supabase } from "./supabase";
-import bcrypt from "bcryptjs"; // Biblioteca para hash seguro de senha
 
 // Função para criar conta (Signup)
-export const signup = async (email, senha, nome, matricula, turno, semestre_entrada) => {
+export const signup = async (
+  email,
+  senha,
+  nome,
+  matricula,
+  turno,
+  semestre_entrada
+) => {
   try {
-    // Criar o usuário no Supabase Auth
+    // Criar usuário no Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: String(email).trim(),
       password: String(senha).trim(),
@@ -14,16 +21,19 @@ export const signup = async (email, senha, nome, matricula, turno, semestre_entr
       console.error("Erro ao criar conta:", error.message);
       return { success: false, message: error.message };
     }
-    // **Hashear a senha antes de salvar no banco** 
-    const salt = await bcrypt.genSalt(10);
-    const senhaHash = await bcrypt.hash(senha, salt);
 
-    // Após criar a conta, salvar informações extras na tabela 'users'
+    // Verificar se o usuário foi criado corretamente
+    if (!data?.user?.id) {
+      return { success: false, message: "Erro ao obter ID do usuário." };
+    }
+
+    const userId = data.user.id;
+
+    // Inserir os dados adicionais do usuário na tabela "users"
     const { error: insertError } = await supabase.from("users").insert([
       {
-        id: data.user.id,
+        id: userId, // Usa o ID gerado pelo Supabase Auth
         email: String(email).trim(),
-        senha: senhaHash, 
         nome: String(nome).trim(),
         matricula: String(matricula).trim(),
         turno: String(turno).trim(),
@@ -43,7 +53,7 @@ export const signup = async (email, senha, nome, matricula, turno, semestre_entr
   }
 };
 
-// Função para fazer login
+// Função para login usando Supabase Auth
 export const login = async (email, senha) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -63,7 +73,7 @@ export const login = async (email, senha) => {
   }
 };
 
-// Função para fazer logout
+// Função para logout
 export const logout = async () => {
   try {
     const { error } = await supabase.auth.signOut();
@@ -76,7 +86,7 @@ export const logout = async () => {
   }
 };
 
-// Função para verificar se o usuário está autenticado
+// Função para obter usuário autenticado
 export const getUser = async () => {
   try {
     const { data, error } = await supabase.auth.getUser();

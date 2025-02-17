@@ -4,7 +4,7 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
     "// Inclui todos os arquivos React no diretório src",
-    "./node_modules/@heroui/theme/dist/components/form.js"
+    "./node_modules/@heroui/theme/dist/components/(dropdown|form|menu|divider|popover|button|ripple|spinner).js"
   ],
   theme: {
     extend: {},

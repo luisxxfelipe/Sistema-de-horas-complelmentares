@@ -158,7 +158,7 @@ const ActivityForm = ({ onActivityAdded }) => {
       const user_id = userData.user.id;
 
       // Inserir no Supabase
-      const { data, error } = await supabase.from("activities").insert([
+      const {error } = await supabase.from("activities").insert([
         {
           user_id,
           tipo_id,
@@ -173,7 +173,6 @@ const ActivityForm = ({ onActivityAdded }) => {
         return;
       }
 
-      console.log("Atividade adicionada:", data);
       if (onActivityAdded) onActivityAdded(); // Atualiza a lista de atividades no Dashboard
       setFormData({
         category: "",
