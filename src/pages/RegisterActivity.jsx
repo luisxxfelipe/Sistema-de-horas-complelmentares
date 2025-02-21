@@ -14,7 +14,7 @@ const RegisterActivity = () => {
   return (
     <div>
       <Header />
-      <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Container maxWidth="md" sx={{ mt: 10 }}>
         <Typography variant="h4" align="center" gutterBottom>
           Cadastro de Atividade
         </Typography>

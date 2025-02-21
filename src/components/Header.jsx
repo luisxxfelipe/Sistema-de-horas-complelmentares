@@ -1,12 +1,18 @@
 import React from "react";
-import { AppBar, Toolbar, Button } from "@mui/material";
+import { AppBar, Toolbar, Button, IconButton } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import LogoUEMG from "../assets/images/logo_uemg.png";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 const Header = () => {
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    navigate("/login");
+  };
 
   return (
     <AppBar
@@ -20,7 +26,6 @@ const Header = () => {
           style={{ maxHeight: 50, marginRight: 16 }}
         />
 
-        {/* Botão de Dashboard */}
         <Button
           startIcon={<DashboardIcon />}
           onClick={() => navigate("/dashboard")}
@@ -33,7 +38,6 @@ const Header = () => {
           Dashboard
         </Button>
 
-        {/* Botão de Registro de Atividade */}
         <Button
           variant="contained"
           startIcon={<AddCircleIcon />}
@@ -47,6 +51,14 @@ const Header = () => {
         >
           Registrar Atividade
         </Button>
+
+        <IconButton
+          onClick={handleLogout}
+          color="inherit"
+          sx={{ marginLeft: 2 }}
+        >
+          <LogoutIcon />
+        </IconButton>
       </Toolbar>
     </AppBar>
   );

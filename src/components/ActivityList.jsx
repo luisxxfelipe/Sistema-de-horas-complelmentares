@@ -19,9 +19,13 @@ import {
   Box,
 } from "@mui/material";
 import { generatePDF } from "../services/generatePDF";
+import { Backdrop, CircularProgress } from "@mui/material";
 
 const ActivityList = ({ activities, setActivities }) => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertSeverity, setAlertSeverity] = useState("success");
 
   // Função de exclusão corrigida para remover apenas a atividade certa
   const handleDeleteActivity = async (id) => {
@@ -37,8 +41,8 @@ const ActivityList = ({ activities, setActivities }) => {
     );
   };
 
-   // Estilos padrão dos botões
-   const buttonStyle = {
+  // Estilos padrão dos botões
+  const buttonStyle = {
     backgroundColor: "#3C6178",
     color: "#fff",
     "&:hover": { backgroundColor: "#2e4f5e" },
@@ -95,83 +99,97 @@ const ActivityList = ({ activities, setActivities }) => {
   };
 
   const handleGeneratePDF = async (tipoAtividade) => {
-    if (activities.length > 0) {
+    if (activities.length === 0) {
+      setAlertMessage("Nenhuma atividade disponível para o PDF.");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    setLoading(true); // Ativa o popup de carregamento
+
+    try {
       const activity_id = activities[0]?.id;
 
-      if (activity_id) {
-        const { data: activityData, error } = await supabase
-          .from("activities")
-          .select("user_id")
-          .eq("id", activity_id)
-          .single();
-
-        if (error) {
-          console.error("Erro ao buscar user_id da atividade:", error);
-          return;
-        }
-
-        const user_id = activityData?.user_id;
-
-        if (user_id) {
-          // Buscar todas as atividades do usuário com categoria relacionada
-          const { data: activitiesData, error: activitiesError } =
-            await supabase
-              .from("activities")
-              .select(
-                `
-              *,
-              activity_types (
-                nome,
-                categoria_id
-              )
-            `
-              )
-              .eq("user_id", user_id);
-
-          if (activitiesError) {
-            console.error("Erro ao buscar atividades:", activitiesError);
-            return;
-          }
-
-          // Filtrar atividades corretamente
-          const filteredActivities = activitiesData.filter((activity) => {
-            if (tipoAtividade === "extensao") {
-              return activity.activity_types?.categoria_id === 4; // Somente categoria 4
-            } else {
-              return activity.activity_types?.categoria_id !== 4; // Todas as outras categorias
-            }
-          });
-
-          if (filteredActivities.length === 0) {
-            console.error(
-              "Nenhuma atividade encontrada para o tipo:",
-              tipoAtividade
-            );
-            return;
-          }
-
-          // Buscar os dados do usuário
-          const { data: userData, error: userError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("id", user_id)
-            .single();
-
-          if (userError) {
-            console.error("Erro ao buscar dados do usuário:", userError);
-            return;
-          }
-
-          // Geração do PDF apenas com as atividades filtradas
-          generatePDF(userData, filteredActivities, tipoAtividade);
-        } else {
-          console.error("Erro: user_id não encontrado.");
-        }
-      } else {
-        console.error("Nenhuma atividade encontrada para gerar o PDF.");
+      if (!activity_id) {
+        setAlertMessage("Nenhuma atividade encontrada para gerar o PDF.");
+        setOpenSnackbar(true);
+        return;
       }
-    } else {
-      console.error("Nenhuma atividade disponível para o PDF.");
+
+      const { data: activityData, error } = await supabase
+        .from("activities")
+        .select("user_id")
+        .eq("id", activity_id)
+        .single();
+
+      if (error || !activityData) {
+        setAlertMessage("Erro ao buscar user_id da atividade.");
+        setOpenSnackbar(true);
+        return;
+      }
+
+      const user_id = activityData.user_id;
+
+      if (!user_id) {
+        setAlertMessage("Erro: user_id não encontrado.");
+        setOpenSnackbar(true);
+        return;
+      }
+
+      const { data: activitiesData, error: activitiesError } = await supabase
+        .from("activities")
+        .select(
+          `
+          *,
+          activity_types (
+            nome,
+            categoria_id
+          )
+        `
+        )
+        .eq("user_id", user_id);
+
+      if (activitiesError || !activitiesData) {
+        setAlertMessage("Erro ao buscar atividades.");
+        setOpenSnackbar(true);
+        return;
+      }
+
+      const filteredActivities = activitiesData.filter((activity) => {
+        if (tipoAtividade === "extensao") {
+          return activity.activity_types?.categoria_id === 4; // Somente categoria 4
+        } else {
+          return activity.activity_types?.categoria_id !== 4; // Todas as outras categorias
+        }
+      });
+
+      if (filteredActivities.length === 0) {
+        setAlertMessage(
+          `Nenhuma atividade encontrada para o tipo: ${tipoAtividade}.`
+        );
+        setOpenSnackbar(true);
+        return;
+      }
+
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user_id)
+        .single();
+
+      if (userError || !userData) {
+        setAlertMessage("Erro ao buscar dados do usuário.");
+        setOpenSnackbar(true);
+        return;
+      }
+
+      await generatePDF(userData, filteredActivities, tipoAtividade);
+    } catch (error) {
+      console.error("Erro ao gerar o PDF:", error);
+      setAlertMessage("Erro inesperado ao gerar o PDF.");
+      setOpenSnackbar(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -277,9 +295,29 @@ const ActivityList = ({ activities, setActivities }) => {
           marginBottom: 2,
         }}
       >
-        <Button onClick={exportToCSV} variant="contained" sx={buttonStyle}>
+        <Button
+          onClick={() => {
+            setLoading(true);
+            try {
+              exportToCSV();
+              setAlertMessage("Arquivo CSV exportado com sucesso!");
+              setAlertSeverity("success");
+              setOpenSnackbar(true);
+            } catch (error) {
+              console.error("Erro ao exportar CSV:", error);
+              setAlertMessage("Erro ao exportar o arquivo CSV.");
+              setAlertSeverity("error");
+              setOpenSnackbar(true);
+            } finally {
+              setLoading(false);
+            }
+          }}
+          variant="contained"
+          sx={buttonStyle}
+        >
           Exportar CSV - Todas as Atividades
         </Button>
+
         <Button
           onClick={() => handleGeneratePDF("extensao")}
           variant="contained"
@@ -287,6 +325,7 @@ const ActivityList = ({ activities, setActivities }) => {
         >
           Gerar PDF - Atividades de Extensão
         </Button>
+
         <Button
           onClick={() => handleGeneratePDF("complementares")}
           variant="contained"
@@ -296,20 +335,28 @@ const ActivityList = ({ activities, setActivities }) => {
         </Button>
       </Box>
 
-      {/* Notificação ao Exportar CSV */}
+      {/* Notificação ao Exportar CSV e Erros Gerais */}
       <Snackbar
         open={openSnackbar}
-        autoHideDuration={3000}
+        autoHideDuration={4000}
         onClose={() => setOpenSnackbar(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={() => setOpenSnackbar(false)}
-          severity="success"
+          severity={alertSeverity}
           sx={{ width: "100%" }}
         >
-          Arquivo CSV exportado com sucesso!
+          {alertMessage}
         </Alert>
       </Snackbar>
+
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
     </div>
   );
 };

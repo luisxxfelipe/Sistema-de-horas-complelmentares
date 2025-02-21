@@ -67,7 +67,7 @@ const Dashboard = () => {
   return (
     <Box>
       <Header />
-      <Container maxWidth="lg" sx={{ marginTop: 4, marginBottom: 4 }}>
+      <Container maxWidth="lg" sx={{ marginTop: 10, marginBottom: 4 }}>
         <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: "bold" }}>
           Dashboard de Atividades
         </Typography>
