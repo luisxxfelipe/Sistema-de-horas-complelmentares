@@ -1,25 +1,42 @@
 import { createContext, useEffect, useState } from "react";
-import { supabase } from "../services/supabase";
+import { useNavigate } from "react-router-dom";
+import { getUser, logout } from "../services/authService"; // Usando AuthService
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUser(data?.session?.user || null);
+    const fetchUser = async () => {
+      const response = await getUser();
+
+      if (response.success) {
+        setUser(response.user);
+        setRole(response.role);
+      } else {
+        setUser(null);
+        setRole(null);
+        navigate("/login");
+      }
     };
 
-    getSession();
+    fetchUser();
+  }, [navigate]);
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    setRole(null);
+    navigate("/login");
+  };
 
-    return () => listener?.subscription?.unsubscribe();
-  }, []);
-
-  return <AuthContext.Provider value={{ user, setUser }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, role, setUser, handleLogout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
+  

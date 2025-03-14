@@ -27,7 +27,6 @@ export const generatePDF = async (userData, activities, tipoAtividade) => {
         .single(); // Assume que o tipo_id é único
 
       if (error) {
-        console.error("Erro ao recuperar tipo de atividade:", error);
         return "Nome não definido"; // Retorna um valor padrão caso haja erro
       }
 

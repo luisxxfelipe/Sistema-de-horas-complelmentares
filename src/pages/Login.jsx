@@ -22,7 +22,6 @@ const Login = () => {
     if (success) {
       navigate("/");
     } else {
-      console.error("Erro ao fazer login:", message);
       setError(message);
     }
   };

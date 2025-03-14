@@ -8,7 +8,8 @@ export const signup = async (
   nome,
   matricula,
   turno,
-  semestre_entrada
+  semestre_entrada,
+  role = "aluno" // Define "aluno" como padrão
 ) => {
   try {
     // Criar usuário no Supabase Auth
@@ -18,7 +19,6 @@ export const signup = async (
     });
 
     if (error) {
-      console.error("Erro ao criar conta:", error.message);
       return { success: false, message: error.message };
     }
 
@@ -32,23 +32,28 @@ export const signup = async (
     // Inserir os dados adicionais do usuário na tabela "users"
     const { error: insertError } = await supabase.from("users").insert([
       {
-        id: userId, // Usa o ID gerado pelo Supabase Auth
+        id: userId,
         email: String(email).trim(),
         nome: String(nome).trim(),
         matricula: String(matricula).trim(),
         turno: String(turno).trim(),
         semestre_entrada: Number(semestre_entrada),
+        role: String(role).trim(), // Define a role do usuário
       },
     ]);
 
     if (insertError) {
-      console.error("Erro ao salvar usuário no banco:", insertError.message);
       return { success: false, message: "Erro ao salvar dados do usuário." };
+    }
+
+    // Salva o token de autenticação e a role no localStorage
+    if (data?.session?.access_token) {
+      localStorage.setItem("authToken", data.session.access_token);
+      localStorage.setItem("userRole", role); // Salva a role do usuário
     }
 
     return { success: true, user: data.user };
   } catch (error) {
-    console.error("Erro inesperado no signup:", error.message);
     return { success: false, message: "Erro inesperado. Tente novamente." };
   }
 };
@@ -62,13 +67,28 @@ export const login = async (email, senha) => {
     });
 
     if (error) {
-      console.error("Erro ao fazer login:", error.message);
       return { success: false, message: error.message };
+    }
+
+    // Buscar a role do usuário no banco de dados
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("email", email)
+      .single();
+
+    if (userError) {
+      return { success: false, message: userError.message };
+    }
+
+    // Salva o token de autenticação e a role no localStorage
+    if (data?.session?.access_token) {
+      localStorage.setItem("authToken", data.session.access_token);
+      localStorage.setItem("userRole", userData?.role || "aluno");
     }
 
     return { success: true, user: data.user };
   } catch (error) {
-    console.error("Erro inesperado no login:", error.message);
     return { success: false, message: "Erro inesperado. Tente novamente." };
   }
 };
@@ -79,26 +99,42 @@ export const logout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
 
+    // Limpa o localStorage ao deslogar
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+
     return { success: true };
   } catch (error) {
-    console.error("Erro ao fazer logout:", error.message);
     return { success: false, message: error.message };
   }
 };
 
 // Função para obter usuário autenticado
+// Função para obter usuário autenticado e garantir que a role está atualizada
 export const getUser = async () => {
   try {
     const { data, error } = await supabase.auth.getUser();
+    if (error) return { success: false, message: error.message };
 
-    if (error) {
-      console.error("Erro ao obter usuário:", error.message);
-      return { success: false, message: error.message };
-    }
+    if (!data.user)
+      return { success: false, message: "Usuário não autenticado." };
 
-    return { success: true, user: data.user };
+    // Buscar a role atualizada no banco
+    const { data: userData, error: roleError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", data.user.id) // Buscando pelo ID do usuário
+      .single();
+
+    if (roleError) return { success: false, message: roleError.message };
+
+    const userRole = userData?.role || "aluno";
+
+    // Atualiza no localStorage para garantir sincronização
+    localStorage.setItem("userRole", userRole);
+
+    return { success: true, user: data.user, role: userRole };
   } catch (error) {
-    console.error("Erro inesperado ao obter usuário:", error.message);
     return { success: false, message: "Erro inesperado. Tente novamente." };
   }
 };

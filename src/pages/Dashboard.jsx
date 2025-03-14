@@ -1,20 +1,95 @@
-import React, { useState, useEffect } from "react";
-import ActivityList from "../components/ActivityList";
-import { Container, Typography, Box } from "@mui/material";
+"use client";
+
+import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
-import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
+import ActivityList from "../components/ActivityList";
+import Sidebar from "../components/Sidebar";
+import { useNavigate } from "react-router-dom"; 
+import { logout } from "../services/authService";
+
+import {
+  Box,
+  Container,
+  Typography,
+  Tabs,
+  Tab,
+  Card,
+  CardContent,
+  CardHeader,
+  Grid,
+  Button,
+  Avatar,
+  Menu,
+  MenuItem,
+  IconButton,
+} from "@mui/material";
+import {
+  NotificationsOutlined as NotificationsIcon,
+  Add as AddIcon,
+  AccessTime as ClockIcon,
+  CheckCircle as CheckCircleIcon,
+  HourglassEmpty as PendingIcon,
+  Cancel as CancelIcon,
+} from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
+import LinearProgress from "@mui/material/LinearProgress";
+
+// Componentes estilizados
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  "& .MuiTabs-indicator": {
+    backgroundColor: "#3C6178",
+  },
+}));
+
+const StyledTab = styled(Tab)(({ theme }) => ({
+  textTransform: "none",
+  fontWeight: theme.typography.fontWeightRegular,
+  fontSize: theme.typography.pxToRem(15),
+  marginRight: theme.spacing(1),
+  "&.Mui-selected": {
+    color: "#3C6178",
+    fontWeight: theme.typography.fontWeightMedium,
+  },
+}));
+
+const StatsCard = styled(Card)(({ theme }) => ({
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  transition: "transform 0.3s, box-shadow 0.3s",
+  "&:hover": {
+    transform: "translateY(-5px)",
+    boxShadow: theme.shadows[8],
+  },
+}));
 
 const Dashboard = () => {
   const [activities, setActivities] = useState([]);
   const [userId, setUserId] = useState(null);
+  const [tabValue, setTabValue] = useState(0);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Manipuladores de menu
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  // Manipulador de mudança de aba
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error) {
-        console.error("Erro ao buscar usuário:", error);
         return;
       }
       if (data?.user) {
@@ -27,7 +102,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchActivities = async () => {
-      if (!userId) return; // Aguarda o `user_id` estar definido antes de buscar atividades
+      if (!userId) return;
+
+      setLoading(true);
 
       const { data, error } = await supabase
         .from("activities")
@@ -37,13 +114,15 @@ const Dashboard = () => {
           descricao,
           horas,
           externa,
+          status,
+          comentario,
           activity_types (
             nome,
             categories:categoria_id ( nome )
           )
         `
         )
-        .eq("user_id", userId); // 🔥 FILTRA SOMENTE AS ATIVIDADES DO USUÁRIO LOGADO 🔥
+        .eq("user_id", userId);
 
       if (error) {
         console.error("Erro ao buscar atividades:", error);
@@ -54,25 +133,270 @@ const Dashboard = () => {
             descricao: item.descricao,
             horas: item.horas ?? 0,
             externa: item.externa ? "Sim" : "Não",
-            categoria: item.activity_types?.categories?.nome || "Não especificado",
+            status: item.status,
+            comentario: item.comentario,
+            categoria:
+              item.activity_types?.categories?.nome || "Não especificado",
             grupo: item.activity_types?.nome || "Não especificado",
           }))
         );
       }
+
+      setLoading(false);
     };
 
     fetchActivities();
-  }, [userId, navigate]); // Agora depende do `userId`, garantindo que ele seja carregado antes
+  }, [userId]);
+
+  // Calcular estatísticas
+  const totalHoras = activities.reduce(
+    (sum, activity) => sum + activity.horas,
+    0
+  );
+  const aprovadas = activities.filter((a) => a.status === "aprovada").length;
+  const pendentes = activities.filter((a) => a.status === "pendente").length;
+  const rejeitadas = activities.filter((a) => a.status === "rejeitada").length;
+
+  // Calcular progresso (exemplo: meta de 100 horas)
+  const meta = 100;
+  const progresso = Math.min(Math.round((totalHoras / meta) * 100), 100);
+  
+  const handleLogout = async () => {
+    await logout(); // Chama a função de logout
+    navigate("/login"); // Redireciona para a página de login
+  };
 
   return (
-    <Box>
-      <Header />
-      <Container maxWidth="lg" sx={{ marginTop: 10, marginBottom: 4 }}>
-        <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: "bold" }}>
-          Dashboard de Atividades
-        </Typography>
-        <ActivityList activities={activities} setActivities={setActivities} />
-      </Container>
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7f9" }}
+    >
+      <Sidebar />
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          overflow: "auto",
+          minHeight: "100vh",
+        }}
+      >
+        {/* Header */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            p: 2,
+            borderBottom: "1px solid #e0e0e0",
+            backgroundColor: "#fff",
+          }}
+        >
+          <IconButton color="inherit" sx={{ mr: 2 }}>
+            <NotificationsIcon />
+          </IconButton>
+          <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
+            <Avatar alt="Usuário" src="/placeholder.svg" />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+          >
+            <MenuItem onClick={handleMenuClose}>Minha Conta</MenuItem>
+            <MenuItem onClick={handleMenuClose}>Configurações</MenuItem>
+            <MenuItem onClick={handleLogout}>Sair</MenuItem>
+          </Menu>
+        </Box>
+
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          {/* Cabeçalho da página */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 3,
+            }}
+          >
+            <Typography variant="h4" fontWeight="bold">
+              Dashboard
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate("/register-activity")} // Redireciona para Registro de Atividade
+              sx={{
+                backgroundColor: "#3C6178",
+                "&:hover": { backgroundColor: "#2e4f5e" },
+              }}
+            >
+              Nova Atividade
+            </Button>
+          </Box>
+
+          {/* Abas */}
+          <StyledTabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="dashboard tabs"
+          >
+            <StyledTab label="Visão Geral" />
+            <StyledTab label="Atividades" />
+            <StyledTab label="Relatórios" />
+          </StyledTabs>
+
+          {/* Conteúdo da aba Visão Geral */}
+          {tabValue === 0 && (
+            <Box sx={{ pt: 3 }}>
+              {/* Cards de estatísticas */}
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatsCard>
+                    <CardHeader
+                      title="Total de Horas"
+                      titleTypographyProps={{ variant: "subtitle2" }}
+                      action={<ClockIcon sx={{ color: "text.secondary" }} />}
+                      sx={{ pb: 0 }}
+                    />
+                    <CardContent>
+                      <Typography variant="h4" fontWeight="bold">
+                        {totalHoras}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Meta: {meta} horas
+                      </Typography>
+                      <LinearProgress
+                        variant="determinate"
+                        value={progresso}
+                        sx={{ mt: 1.5, height: 8, borderRadius: 4 }}
+                      />
+                    </CardContent>
+                  </StatsCard>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatsCard>
+                    <CardHeader
+                      title="Atividades Aprovadas"
+                      titleTypographyProps={{ variant: "subtitle2" }}
+                      action={
+                        <CheckCircleIcon sx={{ color: "success.main" }} />
+                      }
+                      sx={{ pb: 0 }}
+                    />
+                    <CardContent>
+                      <Typography variant="h4" fontWeight="bold">
+                        {aprovadas}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {aprovadas > 0
+                          ? `${Math.round(
+                              (aprovadas / activities.length) * 100
+                            )}%`
+                          : "0%"}{" "}
+                        do total
+                      </Typography>
+                    </CardContent>
+                  </StatsCard>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatsCard>
+                    <CardHeader
+                      title="Atividades Pendentes"
+                      titleTypographyProps={{ variant: "subtitle2" }}
+                      action={<PendingIcon sx={{ color: "warning.main" }} />}
+                      sx={{ pb: 0 }}
+                    />
+                    <CardContent>
+                      <Typography variant="h4" fontWeight="bold">
+                        {pendentes}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {pendentes > 0
+                          ? `${Math.round(
+                              (pendentes / activities.length) * 100
+                            )}%`
+                          : "0%"}{" "}
+                        do total
+                      </Typography>
+                    </CardContent>
+                  </StatsCard>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatsCard>
+                    <CardHeader
+                      title="Atividades Rejeitadas"
+                      titleTypographyProps={{ variant: "subtitle2" }}
+                      action={<CancelIcon sx={{ color: "error.main" }} />}
+                      sx={{ pb: 0 }}
+                    />
+                    <CardContent>
+                      <Typography variant="h4" fontWeight="bold">
+                        {rejeitadas}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {rejeitadas > 0
+                          ? `${Math.round(
+                              (rejeitadas / activities.length) * 100
+                            )}%`
+                          : "0%"}{" "}
+                        do total
+                      </Typography>
+                    </CardContent>
+                  </StatsCard>
+                </Grid>
+              </Grid>
+
+              {/* Atividades Recentes */}
+              <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>
+                Atividades Recentes
+              </Typography>
+              <ActivityList
+                activities={activities.slice(0, 5)}
+                setActivities={setActivities}
+                simplified={true}
+              />
+            </Box>
+          )}
+
+          {/* Conteúdo da aba Atividades */}
+          {tabValue === 1 && (
+            <Box sx={{ pt: 3 }}>
+              <ActivityList
+                activities={activities}
+                setActivities={setActivities}
+                simplified={false}
+              />
+            </Box>
+          )}
+
+          {/* Conteúdo da aba Relatórios */}
+          {tabValue === 2 && (
+            <Box sx={{ pt: 3 }}>
+              <Card>
+                <CardHeader
+                  title="Distribuição por Categoria"
+                  subheader="Visualização das horas por categoria de atividade"
+                />
+                <CardContent>
+                  <Box
+                    sx={{
+                      height: 300,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: "#f5f5f5",
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Typography color="text.secondary">
+                      Gráfico de distribuição por categoria
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          )}
+        </Container>
+      </Box>
     </Box>
   );
 };
