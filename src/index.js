@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import RegisterActivity from "./pages/RegisterActivity";
+import Profile from "./pages/Profile";
 import AdminPanel from "./pages/AdminPanel";
 import { AuthProvider } from "./context/AuthContext";
 import AdminRoute from "./routes/AdminRoute";
@@ -38,6 +39,16 @@ const Root = () => (
           element={
             <PrivateRoute>
               <RegisterActivity />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Rota para profile */}
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <Profile />
             </PrivateRoute>
           }
         />

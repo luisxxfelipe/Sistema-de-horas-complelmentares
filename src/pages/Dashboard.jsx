@@ -18,13 +18,8 @@ import {
   CardHeader,
   Grid,
   Button,
-  Avatar,
-  Menu,
-  MenuItem,
-  IconButton,
 } from "@mui/material";
 import {
-  NotificationsOutlined as NotificationsIcon,
   Add as AddIcon,
   AccessTime as ClockIcon,
   CheckCircle as CheckCircleIcon,
@@ -68,18 +63,8 @@ const Dashboard = () => {
   const [activities, setActivities] = useState([]);
   const [userId, setUserId] = useState(null);
   const [tabValue, setTabValue] = useState(0);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  // Manipuladores de menu
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
 
   // Manipulador de mudança de aba
   const handleTabChange = (event, newValue) => {
@@ -158,7 +143,7 @@ const Dashboard = () => {
   const rejeitadas = activities.filter((a) => a.status === "rejeitada").length;
 
   // Calcular progresso (exemplo: meta de 100 horas)
-  const meta = 100;
+  const meta = 545;
   const progresso = Math.min(Math.round((totalHoras / meta) * 100), 100);
   
   const handleLogout = async () => {
@@ -179,33 +164,6 @@ const Dashboard = () => {
           minHeight: "100vh",
         }}
       >
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            p: 2,
-            borderBottom: "1px solid #e0e0e0",
-            backgroundColor: "#fff",
-          }}
-        >
-          <IconButton color="inherit" sx={{ mr: 2 }}>
-            <NotificationsIcon />
-          </IconButton>
-          <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
-            <Avatar alt="Usuário" src="/placeholder.svg" />
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem onClick={handleMenuClose}>Minha Conta</MenuItem>
-            <MenuItem onClick={handleMenuClose}>Configurações</MenuItem>
-            <MenuItem onClick={handleLogout}>Sair</MenuItem>
-          </Menu>
-        </Box>
 
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
           {/* Cabeçalho da página */}
