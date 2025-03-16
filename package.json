@@ -30,6 +30,7 @@
     "cra-template": "1.2.0",
     "express": "^4.21.2",
     "framer-motion": "^12.4.3",
+    "lucide-react": "^0.482.0",
     "mongodb": "^6.12.0",
     "mongoose": "^8.9.2",
     "pdfmake": "^0.1.68",
@@ -38,6 +39,7 @@
     "react-input-mask": "^2.0.4",
     "react-router-dom": "^7.1.5",
     "react-scripts": "^5.0.1",
+    "recharts": "^2.15.1",
     "web-vitals": "^4.2.4"
   },
   "scripts": {

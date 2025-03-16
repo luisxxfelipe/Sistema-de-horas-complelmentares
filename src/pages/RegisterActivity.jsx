@@ -1,53 +1,87 @@
-import React from "react";
-import { Container, Typography, Box, Toolbar } from "@mui/material";
-import ActivityForm from "../components/ActivityForm";
-import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
+import { Container, Typography, Box, Breadcrumbs, Link } from "@mui/material"
+import { styled } from "@mui/material/styles"
+import { useNavigate } from "react-router-dom"
+import Sidebar from "../components/Sidebar"
+import ActivityForm from "../components/ActivityForm"
+import { Home as HomeIcon, Add as AddIcon, NavigateNext as NavigateNextIcon } from "@mui/icons-material"
+
+// Componentes estilizados
+const PageContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  minHeight: "100vh",
+  backgroundColor: "#f5f7f9",
+}))
+
+const MainContent = styled(Box)(({ theme }) => ({
+  flexGrow: 1,
+  padding: theme.spacing(3),
+  backgroundColor: "#f5f7f9",
+  minHeight: "100vh",
+  display: "flex",
+  flexDirection: "column",
+}))
+
+const PageHeader = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(4),
+}))
 
 const RegisterActivity = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const handleActivityAdded = () => {
-    navigate("/dashboard");
-  };
+    navigate("/dashboard")
+  }
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#3C6178" }}>
+    <PageContainer>
       <Sidebar />
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 0, // Remove o padding
-          backgroundColor: "#3C6178",
-          minHeight: "100vh",
-          display: "flex",
-          justifyContent: "flex-start",
-          alignItems: "stretch",
-        }}
-      >
-        <Box
-          sx={{
-            backgroundColor: "#FFFFFF",
-            width: "100%",
-            minHeight: "100vh",
-            borderTopLeftRadius: "60px",
-            borderBottomLeftRadius: "60px",
-            padding: 4,
-            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <Toolbar />
-          <Container maxWidth="md">
-            <Typography variant="h4" align="center" gutterBottom>
-              Cadastro de Atividade
+      <MainContent>
+        <PageHeader>
+          <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb" sx={{ mb: 2 }}>
+            <Link
+              color="inherit"
+              href="/dashboard"
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                color: "#3C6178",
+                textDecoration: "none",
+                "&:hover": {
+                  textDecoration: "underline",
+                },
+              }}
+            >
+              <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+              Dashboard
+            </Link>
+            <Typography
+              color="text.primary"
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                fontWeight: "medium",
+              }}
+            >
+              <AddIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+              Registrar Atividade
             </Typography>
-            <ActivityForm onActivityAdded={handleActivityAdded} />
-          </Container>
-        </Box>
-      </Box>
-    </Box>
-  );
-};
+          </Breadcrumbs>
 
-export default RegisterActivity;
+          <Typography variant="h4" fontWeight="bold" color="#3C6178" sx={{ mb: 1 }}>
+            Registrar Nova Atividade
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Preencha o formulário abaixo para registrar uma nova atividade complementar.
+          </Typography>
+        </PageHeader>
+
+        <Container maxWidth="md" sx={{ mb: 4 }}>
+          <ActivityForm onActivityAdded={handleActivityAdded} />
+        </Container>
+      </MainContent>
+    </PageContainer>
+  )
+}
+
+export default RegisterActivity
+

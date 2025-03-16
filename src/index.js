@@ -22,8 +22,8 @@ const Root = () => (
   <BrowserRouter>
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
 
         {/* Rotas para alunos */}
         <Route
@@ -64,7 +64,8 @@ const Root = () => (
         />
 
         {/* Redirecionamento baseado na role */}
-        <Route path="*" element={<RedirectByRole />} />
+        <Route path="/" element={<RedirectByRole />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>
   </BrowserRouter>
@@ -72,8 +73,15 @@ const Root = () => (
 
 // Componente separado para garantir que o redirecionamento ocorra corretamente
 const RedirectByRole = () => {
-  const { role } = useAuth();
-  return role === "admin" ? <Navigate to="/admin-dashboard" /> : <Navigate to="/dashboard" />;
+  const { user, role } = useAuth();
+
+  if (!user) return <Navigate to="/login" />; // Se não tem user, manda para login
+
+  return role === "admin" ? (
+    <Navigate to="/admin-dashboard" />
+  ) : (
+    <Navigate to="/dashboard" />
+  );
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Root />);

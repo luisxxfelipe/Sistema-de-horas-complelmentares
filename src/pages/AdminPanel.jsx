@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -30,13 +30,12 @@ import {
   Snackbar,
   Alert,
   Tooltip,
-  Badge,
   Menu,
   MenuItem,
-} from "@mui/material"
-import { styled } from "@mui/material/styles"
-import Sidebar from "../components/Sidebar"
-import { supabase } from "../services/supabase"
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import Sidebar from "../components/Sidebar";
+import { supabase } from "../services/supabase";
 import {
   Visibility as VisibilityIcon,
   CheckCircle as CheckCircleIcon,
@@ -49,8 +48,7 @@ import {
   Assignment as AssignmentIcon,
   AccessTime as AccessTimeIcon,
   Description as DescriptionIcon,
-  NotificationsOutlined as NotificationsIcon,
-} from "@mui/icons-material"
+} from "@mui/icons-material";
 
 // Componentes estilizados
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
@@ -58,7 +56,7 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
   overflow: "hidden",
   marginBottom: theme.spacing(4),
-}))
+}));
 
 const StyledTableHead = styled(TableHead)(({ theme }) => ({
   backgroundColor: "#f5f5f5",
@@ -66,7 +64,7 @@ const StyledTableHead = styled(TableHead)(({ theme }) => ({
     fontWeight: 600,
     color: "#3C6178",
   },
-}))
+}));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(odd)": {
@@ -76,101 +74,74 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
     backgroundColor: "rgba(60, 97, 120, 0.05)",
   },
   transition: "background-color 0.2s",
-}))
-
-const StyledBadge = styled(Badge)(({ theme }) => ({
-  "& .MuiBadge-badge": {
-    backgroundColor: "#44b700",
-    color: "#44b700",
-    boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
-    "&::after": {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      borderRadius: "50%",
-      animation: "ripple 1.2s infinite ease-in-out",
-      border: "1px solid currentColor",
-      content: '""',
-    },
-  },
-  "@keyframes ripple": {
-    "0%": {
-      transform: "scale(.8)",
-      opacity: 1,
-    },
-    "100%": {
-      transform: "scale(2.4)",
-      opacity: 0,
-    },
-  },
-}))
+}));
 
 const SecretariaDashboard = () => {
-  const [activities, setActivities] = useState([])
-  const [filteredActivities, setFilteredActivities] = useState([])
-  const [search, setSearch] = useState("")
-  const [selectedActivity, setSelectedActivity] = useState(null)
-  const [openDialog, setOpenDialog] = useState(false)
-  const [comment, setComment] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const [activities, setActivities] = useState([]);
+  const [filteredActivities, setFilteredActivities] = useState([]);
+  const [search, setSearch] = useState("");
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
-  })
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null)
+  });
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [activeFilters, setActiveFilters] = useState({
     all: true,
     pendente: false,
-  })
+  });
 
   // Buscar atividades pendentes de aprovação
   useEffect(() => {
-    fetchActivities()
-  }, [])
+    fetchActivities();
+  }, []);
 
   // Atualizar atividades filtradas quando a busca ou filtros mudam
   useEffect(() => {
-    filterActivities()
-  }, [search, activities, activeFilters])
+    filterActivities();
+  }, [search, activities, activeFilters]);
 
   const fetchActivities = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("activities")
         .select(
           `id, descricao, horas, status, certificado_url, created_at,
           users(id, nome, matricula), 
-          activity_types(nome, categoria_id)`,
+          activity_types(nome, categoria_id)`
         )
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: false });
 
-      if (error) throw error
-      setActivities(data || [])
+      if (error) throw error;
+      setActivities(data || []);
     } catch (error) {
-      console.error("Erro ao buscar atividades:", error)
+      console.error("Erro ao buscar atividades:", error);
       setSnackbar({
         open: true,
         message: "Erro ao carregar atividades",
         severity: "error",
-      })
+      });
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      setLoading(false);
+      setRefreshing(false);
     }
-  }
+  };
 
   const filterActivities = () => {
-    let filtered = [...activities]
+    let filtered = [...activities];
 
     // Aplicar filtro de status
     if (!activeFilters.all) {
       if (activeFilters.pendente) {
-        filtered = filtered.filter((activity) => activity.status.toLowerCase() === "pendente")
+        filtered = filtered.filter(
+          (activity) => activity.status.toLowerCase() === "pendente"
+        );
       }
     }
 
@@ -179,30 +150,30 @@ const SecretariaDashboard = () => {
       filtered = filtered.filter(
         (activity) =>
           activity.users.nome.toLowerCase().includes(search.toLowerCase()) ||
-          activity.users.matricula.toLowerCase().includes(search.toLowerCase()),
-      )
+          activity.users.matricula.toLowerCase().includes(search.toLowerCase())
+      );
     }
 
-    setFilteredActivities(filtered)
-  }
+    setFilteredActivities(filtered);
+  };
 
   // Abrir modal de avaliação
   const handleOpenDialog = (activity) => {
-    setSelectedActivity(activity)
-    setOpenDialog(true)
-  }
+    setSelectedActivity(activity);
+    setOpenDialog(true);
+  };
 
   // Fechar modal
   const handleCloseDialog = () => {
-    setSelectedActivity(null)
-    setOpenDialog(false)
-    setComment("")
-  }
+    setSelectedActivity(null);
+    setOpenDialog(false);
+    setComment("");
+  };
 
   // Aprovar atividade
   const handleApprove = async () => {
-    if (!selectedActivity) return
-    setLoading(true)
+    if (!selectedActivity) return;
+    setLoading(true);
 
     try {
       const { error } = await supabase
@@ -211,36 +182,40 @@ const SecretariaDashboard = () => {
           status: "Aprovada",
           comentario: comment || "Aprovado sem comentário",
         })
-        .eq("id", selectedActivity.id)
+        .eq("id", selectedActivity.id);
 
-      if (error) throw error
+      if (error) throw error;
 
       setSnackbar({
         open: true,
         message: "Atividade aprovada com sucesso!",
         severity: "success",
-      })
+      });
 
       // Atualizar a lista local
-      setActivities(activities.map((act) => (act.id === selectedActivity.id ? { ...act, status: "Aprovada" } : act)))
+      setActivities(
+        activities.map((act) =>
+          act.id === selectedActivity.id ? { ...act, status: "Aprovada" } : act
+        )
+      );
 
-      handleCloseDialog()
+      handleCloseDialog();
     } catch (err) {
-      console.error("Erro ao aprovar atividade:", err)
+      console.error("Erro ao aprovar atividade:", err);
       setSnackbar({
         open: true,
         message: "Erro ao aprovar a atividade",
         severity: "error",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Rejeitar atividade
   const handleReject = async () => {
-    if (!selectedActivity) return
-    setLoading(true)
+    if (!selectedActivity) return;
+    setLoading(true);
 
     try {
       const { error } = await supabase
@@ -249,80 +224,113 @@ const SecretariaDashboard = () => {
           status: "Rejeitada",
           comentario: comment || "Rejeitado sem comentário",
         })
-        .eq("id", selectedActivity.id)
+        .eq("id", selectedActivity.id);
 
-      if (error) throw error
+      if (error) throw error;
 
       setSnackbar({
         open: true,
         message: "Atividade rejeitada com sucesso!",
         severity: "success",
-      })
+      });
 
       // Atualizar a lista local
-      setActivities(activities.map((act) => (act.id === selectedActivity.id ? { ...act, status: "Rejeitada" } : act)))
+      setActivities(
+        activities.map((act) =>
+          act.id === selectedActivity.id ? { ...act, status: "Rejeitada" } : act
+        )
+      );
 
-      handleCloseDialog()
+      handleCloseDialog();
     } catch (err) {
-      console.error("Erro ao rejeitar atividade:", err)
+      console.error("Erro ao rejeitar atividade:", err);
       setSnackbar({
         open: true,
         message: "Erro ao rejeitar a atividade",
         severity: "error",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleRefresh = () => {
-    setRefreshing(true)
-    fetchActivities()
-  }
+    setRefreshing(true);
+    fetchActivities();
+  };
 
   const handleFilterClick = (event) => {
-    setFilterAnchorEl(event.currentTarget)
-  }
+    setFilterAnchorEl(event.currentTarget);
+  };
 
   const handleFilterClose = () => {
-    setFilterAnchorEl(null)
-  }
+    setFilterAnchorEl(null);
+  };
 
   const handleFilterChange = (filterType) => {
     if (filterType === "all") {
       setActiveFilters({
         all: true,
         pendente: false,
-      })
+      });
     } else {
       setActiveFilters({
         all: false,
         pendente: filterType === "pendente",
-      })
+      });
     }
-    handleFilterClose()
-  }
+    handleFilterClose();
+  };
 
   const getStatusChip = (status) => {
-    const statusLower = status.toLowerCase()
+    const statusLower = status.toLowerCase();
     switch (statusLower) {
       case "aprovada":
-        return <Chip icon={<CheckCircleIcon />} label="Aprovada" color="success" size="small" />
+        return (
+          <Chip
+            icon={<CheckCircleIcon />}
+            label="Aprovada"
+            color="success"
+            size="small"
+          />
+        );
       case "rejeitada":
-        return <Chip icon={<CancelIcon />} label="Rejeitada" color="error" size="small" />
+        return (
+          <Chip
+            icon={<CancelIcon />}
+            label="Rejeitada"
+            color="error"
+            size="small"
+          />
+        );
       default:
-        return <Chip label="Pendente" color="warning" size="small" variant="outlined" />
+        return (
+          <Chip
+            label="Pendente"
+            color="warning"
+            size="small"
+            variant="outlined"
+          />
+        );
     }
-  }
+  };
 
   // Estatísticas
-  const totalActivities = activities.length
-  const pendingActivities = activities.filter((a) => a.status.toLowerCase() === "pendente").length
-  const approvedActivities = activities.filter((a) => a.status.toLowerCase() === "aprovada").length
-  const rejectedActivities = activities.filter((a) => a.status.toLowerCase() === "rejeitada").length
+  const totalActivities = activities.length;
+  const pendingActivities = activities.filter(
+    (a) => a.status.toLowerCase() === "pendente"
+  ).length;
+  const approvedActivities = activities.filter(
+    (a) => a.status.toLowerCase() === "aprovada"
+  ).length;
+  const rejectedActivities = activities.filter(
+    (a) => a.status.toLowerCase() === "rejeitada"
+  ).length;
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7f9" }}>
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7f9" }}
+    >
       <Sidebar />
       <Box
         component="main"
@@ -332,35 +340,13 @@ const SecretariaDashboard = () => {
           minHeight: "100vh",
         }}
       >
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            p: 2,
-            borderBottom: "1px solid #e0e0e0",
-            backgroundColor: "#fff",
-          }}
-        >
-          <Tooltip title="Notificações">
-            <IconButton color="inherit" sx={{ mr: 2 }}>
-              <Badge badgeContent={pendingActivities} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Perfil">
-            <IconButton sx={{ p: 0 }}>
-              <StyledBadge overlap="circular" anchorOrigin={{ vertical: "bottom", horizontal: "right" }} variant="dot">
-                <Avatar alt="Admin" src="/placeholder.svg" />
-              </StyledBadge>
-            </IconButton>
-          </Tooltip>
-        </Box>
-
         <Box sx={{ p: 4 }}>
-          <Typography variant="h4" fontWeight="bold" color="#3C6178" gutterBottom>
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+            color="#3C6178"
+            gutterBottom
+          >
             Painel da Secretaria
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
@@ -581,11 +567,21 @@ const SecretariaDashboard = () => {
               >
                 Filtrar
               </Button>
-              <Menu anchorEl={filterAnchorEl} open={Boolean(filterAnchorEl)} onClose={handleFilterClose}>
-                <MenuItem onClick={() => handleFilterChange("all")} selected={activeFilters.all}>
+              <Menu
+                anchorEl={filterAnchorEl}
+                open={Boolean(filterAnchorEl)}
+                onClose={handleFilterClose}
+              >
+                <MenuItem
+                  onClick={() => handleFilterChange("all")}
+                  selected={activeFilters.all}
+                >
                   Todas as atividades
                 </MenuItem>
-                <MenuItem onClick={() => handleFilterChange("pendente")} selected={activeFilters.pendente}>
+                <MenuItem
+                  onClick={() => handleFilterChange("pendente")}
+                  selected={activeFilters.pendente}
+                >
                   Apenas pendentes
                 </MenuItem>
               </Menu>
@@ -625,13 +621,17 @@ const SecretariaDashboard = () => {
                   <TableRow>
                     <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                       <CircularProgress size={30} sx={{ color: "#3C6178" }} />
-                      <Typography sx={{ mt: 1 }}>Carregando atividades...</Typography>
+                      <Typography sx={{ mt: 1 }}>
+                        Carregando atividades...
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ) : filteredActivities.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                      <Typography color="text.secondary">Nenhuma atividade encontrada</Typography>
+                      <Typography color="text.secondary">
+                        Nenhuma atividade encontrada
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -649,11 +649,18 @@ const SecretariaDashboard = () => {
                           >
                             <PersonIcon fontSize="small" />
                           </Avatar>
-                          <Typography variant="body2">{activity.users.nome}</Typography>
+                          <Typography variant="body2">
+                            {activity.users.nome}
+                          </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip icon={<SchoolIcon />} label={activity.users.matricula} size="small" variant="outlined" />
+                        <Chip
+                          icon={<SchoolIcon />}
+                          label={activity.users.matricula}
+                          size="small"
+                          variant="outlined"
+                        />
                       </TableCell>
                       <TableCell>{activity.activity_types.nome}</TableCell>
                       <TableCell>
@@ -706,7 +713,12 @@ const SecretariaDashboard = () => {
         </Box>
 
         {/* Modal de avaliação */}
-        <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle sx={{ borderBottom: "1px solid #eee", pb: 2 }}>
             <Typography variant="h6" fontWeight="bold">
               Avaliação de Atividade
@@ -734,7 +746,9 @@ const SecretariaDashboard = () => {
                       <PersonIcon />
                     </Avatar>
                     <Box>
-                      <Typography variant="h6">{selectedActivity.users.nome}</Typography>
+                      <Typography variant="h6">
+                        {selectedActivity.users.nome}
+                      </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Matrícula: {selectedActivity.users.matricula}
                       </Typography>
@@ -750,14 +764,18 @@ const SecretariaDashboard = () => {
                   <Typography variant="subtitle2" color="text.secondary">
                     Atividade
                   </Typography>
-                  <Typography variant="body1">{selectedActivity.activity_types.nome}</Typography>
+                  <Typography variant="body1">
+                    {selectedActivity.activity_types.nome}
+                  </Typography>
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Horas
                   </Typography>
-                  <Typography variant="body1">{selectedActivity.horas} horas</Typography>
+                  <Typography variant="body1">
+                    {selectedActivity.horas} horas
+                  </Typography>
                 </Grid>
 
                 <Grid item xs={12}>
@@ -797,7 +815,11 @@ const SecretariaDashboard = () => {
             )}
           </DialogContent>
           <DialogActions sx={{ p: 2, borderTop: "1px solid #eee" }}>
-            <Button onClick={handleCloseDialog} variant="outlined" sx={{ color: "#666" }}>
+            <Button
+              onClick={handleCloseDialog}
+              variant="outlined"
+              sx={{ color: "#666" }}
+            >
               Cancelar
             </Button>
             <Button
@@ -838,8 +860,7 @@ const SecretariaDashboard = () => {
         </Snackbar>
       </Box>
     </Box>
-  )
-}
+  );
+};
 
-export default SecretariaDashboard
-
+export default SecretariaDashboard;

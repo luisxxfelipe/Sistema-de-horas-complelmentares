@@ -96,7 +96,7 @@ const Profile = () => {
     matricula: "",
     phone: "",
     curso: "",
-    dataIngresso: "",
+    semestreEntrada: "",
     avatar_url: null,
   });
 
@@ -154,7 +154,7 @@ const Profile = () => {
           matricula: profileData.matricula || "000000",
           phone: profileData.phone || "(00) 00000-0000",
           cursos,
-          dataIngresso: profileData.semestre || "2020-01-01",
+          semestreEntrada: profileData.semestre_entrada,
           avatar_url: profileData.url_profile || null, // Corrigido para usar url_profile
         });
       } catch (error) {
@@ -533,9 +533,7 @@ const Profile = () => {
                   />
                   <Chip
                     icon={<CalendarMonthIcon />}
-                    label={`Ingresso: ${new Date(
-                      userData.dataIngresso
-                    ).toLocaleDateString()}`}
+                    label={`Ingresso: ${userData.semestreEntrada}`}
                     variant="outlined"
                   />
                 </Box>
@@ -633,11 +631,11 @@ const Profile = () => {
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="Data de Ingresso"
-                      name="dataIngresso"
-                      type="date"
-                      value={userData.dataIngresso}
-                      disabled={true} // Data de ingresso não pode ser alterada
+                      label="Semestre de Ingresso"
+                      name="semestreEntrada"
+                      type="text"
+                      value={userData.semestreEntrada}
+                      disabled={true}
                       variant="outlined"
                       InputLabelProps={{ shrink: true }}
                     />
